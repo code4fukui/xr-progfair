@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
+<title>PCNこどもプログラマーズフェア2025記念ゲーム</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://threejs.org/build/three.module.js",
+    "three/addons/": "https://threejs.org/examples/jsm/"
+  }
+}
+</script>
+<!--
+https://code4fukui.github.io/three.js/build/three.module.js",
+-->
+</head><body>
+<script type="module">
+import { THREE, scene, camera, renderer } from "https://code4fukui.github.io/egxr.js/egxr.js";
+import { loadGLB } from "./loadGLB.js";
+
+scene.background = new THREE.Color(0x87CEEB);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 2.0); // 色と強度
+scene.add(ambientLight);
+
+const me = await loadGLB("./zerosen21-crop.glb");
+scene.add(me);
+
+const glb = await loadGLB("./koku350k.glb");
+
+const cnt = 10;
+const kokus = [];
+for (let i = 0; i < cnt; i++) {
+  const koku = glb.clone();
+  kokus.push(koku);
+  scene.add(koku);
+}
+
+const init = () => {
+  me.position.x = 0;
+  me.position.y = 0.4;
+  me.position.z = -1;
+  me.rotation.x = Math.PI / 2;
+  me.rotation.z = 0;
+  
+  for (let i = 0; i < cnt; i++) {
+    const koku = kokus[i];
+    koku.position.y = Math.random() * 3 - 1.5;
+    koku.position.z = -1.4;
+    koku.position.x = Math.random() * 2 - 1;
+    koku.rotation.x = Math.PI / 2;
+    const scale = 1.2;
+    koku.scale.set(scale, scale, scale);
+  }
+};
+
+const STATE_GAME = 0;
+const STATE_GAMEOVER = 1;
+let state = STATE_GAME;
+
+init();
+
+document.body.onkeydown = (e) => {
+  if (state != STATE_GAME) return;
+
+  if (e.key == "ArrowLeft" && me.position.x > -0.8) {
+    me.position.x -= 0.1;
+    me.rotation.z -= 0.12;
+  } else if (e.key == "ArrowRight" && me.position.x < 0.8) {
+    me.position.x += 0.1;
+    me.rotation.z += 0.12;
+  }
+};
+
+const isHit = (koku) => {
+  const y = koku.position.y;
+  //console.log(me.position.x, koku.position.x);
+  if (y < 0.26 || y > 0.30) {
+    return false;
+  }
+  const dx = me.position.x - koku.position.x;
+  return Math.abs(dx) < 0.05;
+};
+const game = () => {
+  for (const koku of kokus) {
+    koku.rotation.y += 0.01;
+    koku.position.y += 0.01;
+    if (isHit(koku)) {
+      state = STATE_GAMEOVER;
+    }
+    if (koku.position.y > 1) {
+      koku.position.y -= 2;
+      koku.position.x = Math.random() * 2 - 1;
+    }
+  }
+};
+const gameover = (t) => {
+  me.rotation.z += .1;
+  if (t > 2000) {
+    init();
+    state = STATE_GAME;
+  }
+};
+
+let t0 = performance.now();
+renderer.setAnimationLoop(() => {
+  const bkstate = state;
+  const t = performance.now() - t0;
+  if (state == STATE_GAME) {
+    game(t);
+  } else if (state == STATE_GAMEOVER) {
+    gameover(t);
+  }
+  if (state != bkstate) {
+    t0 = performance.now();
+  }
+	renderer.render(scene, camera);
+});
+</script>
